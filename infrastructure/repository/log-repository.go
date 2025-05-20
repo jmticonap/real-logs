@@ -14,6 +14,34 @@ import (
 
 var logChan = make(chan domain.LogChanDataType, 1000)
 
+func LogChanPush(
+	logData domain.LogType,
+	performanceData []domain.PerformanceType,
+) {
+	t, err := time.Parse("2006-01-02T15:04:05.000-07:00", logData.Timestamp)
+	if err != nil {
+		log.Panicf("Error parsing: %s", err)
+		return
+	}
+
+	var params []any = []any{}
+	for _, perform := range performanceData {
+		params := append(
+			params,
+			logData.TraceId,
+			perform.Method,
+			perform.Exectime,
+			perform.MemoryUsage,
+			t.Format(time.RFC3339Nano),
+		)
+
+		logChan <- domain.LogChanDataType{
+			Params: params,
+		}
+		params = params[:0]
+	}
+}
+
 func StartWriterWorker(ctx context.Context) {
 	go func() {
 		for {

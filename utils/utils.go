@@ -1,9 +1,12 @@
 package utils
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"time"
+
+	"github.com/jmticonap/real-logs/domain"
 )
 
 func EnsureDir(path string) error {
@@ -48,4 +51,13 @@ func ParseHour(h string) (time.Time, error) {
 	}
 
 	return result, err
+}
+
+func GetLogItem(line string) (domain.LogType, error) {
+	var log domain.LogType
+	if err := json.Unmarshal([]byte(line), &log); err != nil {
+		return domain.LogType{}, err
+	}
+
+	return log, nil
 }

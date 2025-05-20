@@ -20,6 +20,7 @@ import (
 func main() {
 	// Flags
 	flow := flag.String("flow", domain.RealTime, "Define que flujo se utiliza")
+	dir := flag.String("dir", "", "Define el path del directorio objetivo")
 	startFlag := flag.String("start", "", "Hora de inicio en formato HH:MM (opcional, también puede ir en config)")
 	endFlag := flag.String("end", "", "Hora de fin en formato HH:MM (opcional, también puede ir en config)")
 	flag.Parse()
@@ -97,5 +98,16 @@ func main() {
 			endTime.Format("15:04"),
 		)
 		service.BetweenTimesProcess(ctx, cfg, startTime, endTime)
+
+	case domain.FromDir:
+		var targetDir string
+		if dir != nil && *dir != "" {
+			fmt.Printf("flag: %s", *dir)
+			targetDir = *dir
+		} else {
+			fmt.Printf("Config: %s", cfg.LogDirectory)
+			targetDir = cfg.LogDirectory
+		}
+		service.FromDir(ctx, targetDir)
 	}
 }

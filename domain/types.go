@@ -23,6 +23,11 @@ type LogType struct {
 	Msg       string `json:"msg"`
 }
 
+type PerformanceLogType struct {
+	Title           string            `json:"title"`
+	PerformanceInfo []PerformanceType `json:"performanceInfo"`
+}
+
 type PerformanceType struct {
 	Exectime    float32 `json:"exectime"`
 	Origin      string  `json:"origin"`

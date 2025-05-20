@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"regexp"
 	"strings"
@@ -60,6 +61,8 @@ func StartWriterWorker(ctx context.Context) {
 				_, err := db.ExecContext(ctx, query, LogQueryData.Params...)
 				if err != nil {
 					log.Printf("Error inserting data: %s", err)
+				} else {
+					fmt.Printf("\rSaved data: %s", LogQueryData.Params)
 				}
 			}
 		}
@@ -69,12 +72,6 @@ func StartWriterWorker(ctx context.Context) {
 func SaveLog(ctx context.Context, line string) {
 	var params []any = []any{}
 
-	// re := regexp.MustCompile(`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}-\d{2}:\d{2}`)
-	// match := re.FindStringSubmatch(line)
-	// if match == nil {
-	// 	log.Panicln("No se encontró fecha")
-	// 	return
-	// }
 	var logData domain.LogType
 	if err := json.Unmarshal([]byte(line), &logData); err != nil {
 		log.Panicf("Unmarshelling error: %s", err)

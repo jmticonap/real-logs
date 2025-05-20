@@ -11,6 +11,7 @@ import (
 
 	"github.com/jmticonap/real-logs/domain"
 	"github.com/jmticonap/real-logs/infrastructure/repository"
+	"github.com/jmticonap/real-logs/utils"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
@@ -141,7 +142,15 @@ func streamLogs(
 
 				go func() {
 					line := string(buf[:n])
-					repository.SaveLog(ctx, line)
+					log, err := utils.GetLogItem(line)
+					if err != nil {
+						return
+					}
+					logPerformanceInfo, err := getPerformanceLogInfo(log)
+					if err != nil {
+						return
+					}
+					repository.LogChanPush(log, logPerformanceInfo)
 				}()
 			}
 			if err != nil {

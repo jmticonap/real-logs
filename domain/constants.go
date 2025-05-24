@@ -13,4 +13,6 @@ const (
 	RealTime     string = "realtime"
 	BetweenTimes string = "btimes"
 	FromDir      string = "fromdir"
+
+	LogTypeJson string = "json"
 )

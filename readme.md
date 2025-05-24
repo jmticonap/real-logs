@@ -1,7 +1,7 @@
 # RealLogs
 ## Kubernetes Pod Log Collector
 
-Este programa permite recolectar en tiempo real los logs de todos los pods que coincidan con un `labelSelector` dentro de un `namespace` específico en un clúster de Kubernetes. Está diseñado especialmente para escenarios como **pruebas de estrés**, donde los pods pueden reiniciarse o replicarse rápidamente.
+Este programa permite recolectar desde una carpeta los logs descargados y en tiempo real de todos los pods que coincidan con un `labelSelector` dentro de un `namespace` específico en un clúster de Kubernetes. Los cuales serán ingresados en la base de datos Sqlite. Está diseñado especialmente para escenarios como **pruebas de estrés**, donde los pods pueden reiniciarse o replicarse rápidamente.
 
 ## 🧩 Características
 

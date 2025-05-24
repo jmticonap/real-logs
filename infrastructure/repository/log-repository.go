@@ -2,15 +2,13 @@ package repository
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
-	"regexp"
-	"strings"
 	"time"
 
 	"github.com/jmticonap/real-logs/domain"
 	"github.com/jmticonap/real-logs/infrastructure/db"
+	"github.com/jmticonap/real-logs/utils"
 )
 
 var logChan = make(chan domain.LogChanDataType, 1000)
@@ -70,61 +68,13 @@ func StartWriterWorker(ctx context.Context) {
 }
 
 func SaveLog(ctx context.Context, line string) {
-	var params []any = []any{}
-
-	var logData domain.LogType
-	if err := json.Unmarshal([]byte(line), &logData); err != nil {
-		log.Panicf("Unmarshelling error: %s", err)
-	}
-
-	performanceData, err := getPerformanceData(logData.Msg)
+	log, err := utils.GetLogItem(line)
 	if err != nil {
-		log.Panicf("Error reading performance data: %s", err)
 		return
 	}
-
-	t, err := time.Parse("2006-01-02T15:04:05.000-07:00", logData.Timestamp)
+	logPerformanceInfo, err := utils.GetPerformanceLogInfo(log)
 	if err != nil {
-		log.Panicf("Error parsing: %s", err)
 		return
 	}
-
-	params = append(
-		params,
-		logData.TraceId,
-		performanceData.Method,
-		performanceData.Exectime,
-		performanceData.MemoryUsage,
-		t.Format(time.RFC3339Nano),
-	)
-
-	logChan <- domain.LogChanDataType{
-		Params: params,
-	}
-}
-
-func getPerformanceData(line string) (domain.PerformanceType, error) {
-	// Parsear el JSON externo
-	var logData map[string]interface{}
-	if err := json.Unmarshal([]byte(line), &logData); err != nil {
-		return domain.PerformanceType{}, err
-	}
-
-	// Extraer el campo "msg"
-	rawMsg := logData["msg"].(string)
-
-	// Limpiar el string del campo "msg"
-	// - Reemplazar comillas simples por comillas dobles
-	// - Reemplazar claves sin comillas por claves con comillas
-	clean := strings.ReplaceAll(rawMsg, "'", `"`)
-	re := regexp.MustCompile(`(?m)(\s*)(\w+):`)
-	clean = re.ReplaceAllString(clean, `$1"$2":`)
-
-	// Parsear el string limpio como JSON
-	var msgData domain.PerformanceType
-	if err := json.Unmarshal([]byte(clean), &msgData); err != nil {
-		return domain.PerformanceType{}, err
-	}
-
-	return msgData, nil
+	LogChanPush(log, logPerformanceInfo)
 }

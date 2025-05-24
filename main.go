@@ -23,6 +23,7 @@ func main() {
 	dir := flag.String("dir", "", "Define el path del directorio objetivo")
 	startFlag := flag.String("start", "", "Hora de inicio en formato HH:MM (opcional, también puede ir en config)")
 	endFlag := flag.String("end", "", "Hora de fin en formato HH:MM (opcional, también puede ir en config)")
+	// logType := flag.String("log-type", "", "")
 	flag.Parse()
 
 	db.OpenDb()
@@ -102,11 +103,13 @@ func main() {
 	case domain.FromDir:
 		var targetDir string
 		if dir != nil && *dir != "" {
-			fmt.Printf("flag: %s", *dir)
+			fmt.Printf("flag| dir=%s", *dir)
 			targetDir = *dir
-		} else {
+		} else if cfg.LogDirectory != "" {
 			fmt.Printf("Config: %s", cfg.LogDirectory)
 			targetDir = cfg.LogDirectory
+		} else {
+			log.Fatalln("No hay un directorio destino configurado.")
 		}
 		service.FromDir(ctx, targetDir)
 	}

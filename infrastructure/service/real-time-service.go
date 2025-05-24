@@ -1,17 +1,18 @@
 package service
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"io"
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/jmticonap/real-logs/domain"
 	"github.com/jmticonap/real-logs/infrastructure/repository"
-	"github.com/jmticonap/real-logs/utils"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
@@ -104,6 +105,20 @@ func RealTimeProcess(ctx context.Context, cfg *domain.Config) {
 	}
 }
 
+// streamLogs streams the logs from a specified K8s pod in real-time, writing them to a local file
+// and processing each log line asynchronously. It listens for context cancellation to gracefully stop streaming.
+// The function takes a context for cancellation, a Kubernetes clientset, the directory to store logs, the namespace,
+// and the pod name. It returns an error if any occurs during log streaming, file operations, or log processing.
+//
+// Parameters:
+//   - ctx: Context for cancellation and timeout control.
+//   - clientset: Kubernetes clientset to interact with the cluster.
+//   - dir: Directory path where the log file will be stored.
+//   - namespace: Namespace of the target pod.
+//   - podName: Name of the pod to stream logs from.
+//
+// Returns:
+//   - error: An error if streaming, file writing, or log processing fails; otherwise, nil.
 func streamLogs(
 	ctx context.Context,
 	clientset *kubernetes.Clientset,
@@ -119,6 +134,7 @@ func streamLogs(
 	}
 	defer stream.Close()
 
+	reader := bufio.NewReader(stream)
 	filename := filepath.Join(dir, podName+".log")
 	file, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {
@@ -126,40 +142,26 @@ func streamLogs(
 	}
 	defer file.Close()
 
-	buf := make([]byte, 2048)
 	for {
 		select {
 		case <-ctx.Done():
 			log.Printf("Cancelando streamLogs para pod %s", podName)
 			return nil
 		default:
-			n, err := stream.Read(buf)
-			if n > 0 {
-				_, wErr := file.Write(buf[:n])
-				if wErr != nil {
-					return fmt.Errorf("error escribiendo log pod %s: %w", podName, wErr)
-				}
-
-				go func() {
-					line := string(buf[:n])
-					log, err := utils.GetLogItem(line)
-					if err != nil {
-						return
-					}
-					logPerformanceInfo, err := getPerformanceLogInfo(log)
-					if err != nil {
-						return
-					}
-					repository.LogChanPush(log, logPerformanceInfo)
-				}()
-			}
+			lineBytes, err := reader.ReadString('\n')
 			if err != nil {
 				if err == io.EOF {
-					log.Printf("Stream cerrado para pod %s", podName)
-					return nil
+					return fmt.Errorf("stream cerrado para pod %s", podName)
 				}
-				return fmt.Errorf("error leyendo stream pod %s: %w", podName, err)
+				return fmt.Errorf("error leyendo log pod %s: %w", podName, err)
 			}
+			line := strings.TrimSuffix(lineBytes, "\n")
+
+			if _, wErr := file.WriteString(line + "\n"); wErr != nil {
+				return fmt.Errorf("error escribiendo log pod %s: %w", podName, wErr)
+			}
+
+			go repository.SaveLog(ctx, line)
 		}
 	}
 }

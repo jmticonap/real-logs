@@ -43,3 +43,18 @@ make run-dev
 ```sh
 make build
 ```
+
+## Flags
+- flow: Define el flujo que utiliza.
+  - realtime: se guardan los logs en tiempo real y toman reintentos de lectura si el pod se reinicia.
+  - fromdir: Define que a partir de un directorio con archivos de logs se leerán y se guardará toda la información en json en una base de datos Sqlite.
+  - Ejemplo:
+    ```sh
+    ./reallogs -flow=realtime -dir=./log-1 -srv=se-core-charge
+    ```
+    Nota: Descarga los logs en tiempo real y los guarda en la ruta relativa "./log-1". En `-srv` puede asignar el valor `*` para obtener los logs de todos los pods dentro del namespace.
+
+    ```sh
+    ./reallogs -flow=fromdir -dir=./log-1
+    ```
+    Nota: Carga la información de los logs en formato json que encuentre en "./log-1" en una base de datos Sqlite

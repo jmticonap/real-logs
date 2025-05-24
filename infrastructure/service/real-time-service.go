@@ -20,6 +20,7 @@ import (
 )
 
 func RealTimeProcess(ctx context.Context, cfg *domain.Config) {
+	srvName := ctx.Value(domain.CtxKeyType("srvName"))
 	clientset, err := GetKubernetesClient()
 	if err != nil {
 		log.Fatalf("Error creando cliente: %v", err)
@@ -30,7 +31,15 @@ func RealTimeProcess(ctx context.Context, cfg *domain.Config) {
 	var mu sync.Mutex
 
 	watcher, err := clientset.CoreV1().Pods(cfg.Namespace).Watch(ctx, metav1.ListOptions{
-		LabelSelector: cfg.LabelSelector,
+		LabelSelector: func() string {
+			if srvName != "" {
+				return srvName.(string)
+			} else if srvName == "*" {
+				return ""
+			} else {
+				return cfg.LabelSelector
+			}
+		}(),
 	})
 	if err != nil {
 		log.Fatalf("Error creando watcher: %v", err)

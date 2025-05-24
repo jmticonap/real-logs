@@ -2,6 +2,8 @@ package domain
 
 type StrObject = map[string]string
 
+type CtxKeyType string
+
 type Config struct {
 	Namespace     string `json:"namespace"`
 	LabelSelector string `json:"labelSelector"`

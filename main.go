@@ -70,7 +70,12 @@ func main() {
 			domain.CtxKeyType("srvName"),
 			*srvName,
 		)
-		service.RealTimeProcess(srvCtx, cfg)
+		dirCtx := context.WithValue(
+			srvCtx,
+			domain.CtxKeyType("dir"),
+			*dir,
+		)
+		service.RealTimeProcess(dirCtx, cfg)
 
 	case domain.BetweenTimes:
 		fmt.Println("Flujo BetweenTimes")

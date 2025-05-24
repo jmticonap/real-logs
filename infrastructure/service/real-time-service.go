@@ -20,7 +20,6 @@ import (
 )
 
 func RealTimeProcess(ctx context.Context, cfg *domain.Config) {
-	srvName := ctx.Value(domain.CtxKeyType("srvName"))
 	clientset, err := GetKubernetesClient()
 	if err != nil {
 		log.Fatalf("Error creando cliente: %v", err)
@@ -31,15 +30,7 @@ func RealTimeProcess(ctx context.Context, cfg *domain.Config) {
 	var mu sync.Mutex
 
 	watcher, err := clientset.CoreV1().Pods(cfg.Namespace).Watch(ctx, metav1.ListOptions{
-		LabelSelector: func() string {
-			if srvName != "" {
-				return srvName.(string)
-			} else if srvName == "*" {
-				return ""
-			} else {
-				return cfg.LabelSelector
-			}
-		}(),
+		LabelSelector: getLabelSelector(ctx, cfg),
 	})
 	if err != nil {
 		log.Fatalf("Error creando watcher: %v", err)
@@ -90,7 +81,13 @@ func RealTimeProcess(ctx context.Context, cfg *domain.Config) {
 					mu.Unlock()
 
 					go func(pName string, c context.Context) {
-						err := streamLogs(c, clientset, cfg.LogDirectory, cfg.Namespace, pName)
+						err := streamLogs(
+							c,
+							clientset,
+							getDir(ctx, cfg),
+							cfg.Namespace,
+							pName,
+						)
 						if err != nil {
 							log.Printf("Error en streamLogs pod %s: %v", pName, err)
 						}
@@ -172,5 +169,26 @@ func streamLogs(
 
 			go repository.SaveLog(ctx, line)
 		}
+	}
+}
+
+// Take a path for the target directory, taking into account that
+// the first option it's witch come from flag.
+func getDir(ctx context.Context, cfg *domain.Config) string {
+	if ctx.Value(domain.CtxKeyType("dir")) != "" {
+		return ctx.Value(domain.CtxKeyType("dir")).(string)
+	} else {
+		return cfg.LogDirectory
+	}
+}
+
+func getLabelSelector(ctx context.Context, cfg *domain.Config) string {
+	srvName := ctx.Value(domain.CtxKeyType("srvName"))
+	if srvName != "" {
+		return srvName.(string)
+	} else if srvName == "*" {
+		return ""
+	} else {
+		return cfg.LabelSelector
 	}
 }

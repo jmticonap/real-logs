@@ -45,6 +45,7 @@ make build
 ```
 
 ## Flags
+En la ejecución los valores que provienen del `config.json` siempre será la segunda opción.
 - flow: Define el flujo que utiliza.
   - realtime: se guardan los logs en tiempo real y toman reintentos de lectura si el pod se reinicia.
   - fromdir: Define que a partir de un directorio con archivos de logs se leerán y se guardará toda la información en json en una base de datos Sqlite.

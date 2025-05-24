@@ -3,7 +3,6 @@ package service
 import (
 	"bufio"
 	"context"
-	"fmt"
 	"log"
 	"os"
 
@@ -12,7 +11,6 @@ import (
 )
 
 func FromDir(ctx context.Context, dirPath string) {
-	fmt.Printf("DIR: %s\n", dirPath)
 	paths, err := utils.GetAllFilesRecursive(dirPath)
 	if err != nil {
 		log.Fatalf("Error reading dir: %s", err)
@@ -31,6 +29,8 @@ func FromDir(ctx context.Context, dirPath string) {
 			if err != nil {
 				continue
 			}
+			repository.GeneralChanPush(log)
+
 			logPerformanceInfo, err := utils.GetPerformanceLogInfo(log)
 			if err != nil {
 				continue

@@ -4,23 +4,24 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"reflect"
 	"testing"
 	"time"
 
-	// Asegúrate de que esta ruta de importación sea correcta para tu proyecto
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/jmticonap/real-logs/domain"
 	"github.com/jmticonap/real-logs/utils"
 )
 
-// --- Tests para EnsureDir (sin cambios respecto a la respuesta anterior) ---
+// --- Tests para EnsureDir ---
 func TestEnsureDir(t *testing.T) {
 	// Helper para crear un directorio temporal para los tests
 	createTempDir := func(t *testing.T) string {
 		t.Helper()
 		dir, err := os.MkdirTemp("", "testdir_")
 		if err != nil {
-			t.Fatalf("Failed to create temp dir: %v", err)
+			t.Fatalf("Failed to create temp dir: %v", err) // Fatalf está bien aquí, es setup
 		}
 		return dir
 	}
@@ -32,16 +33,8 @@ func TestEnsureDir(t *testing.T) {
 		testPath := filepath.Join(baseDir, "newdir")
 
 		err := utils.EnsureDir(testPath)
-		if err != nil {
-			t.Errorf("EnsureDir() error = %v, wantErr nil", err)
-		}
-
-		info, statErr := os.Stat(testPath)
-		if os.IsNotExist(statErr) {
-			t.Errorf("Directorio no fue creado en %s", testPath)
-		} else if !info.IsDir() {
-			t.Errorf("Ruta %s fue creada pero no es un directorio", testPath)
-		}
+		assert.NoError(t, err, "EnsureDir() no debería retornar error")
+		assert.DirExists(t, testPath, "El directorio debería existir")
 	})
 
 	t.Run("DirectorioYaExiste", func(t *testing.T) {
@@ -49,14 +42,12 @@ func TestEnsureDir(t *testing.T) {
 		defer os.RemoveAll(baseDir)
 
 		existingPath := filepath.Join(baseDir, "existingdir")
-		if err := os.Mkdir(existingPath, 0755); err != nil {
-			t.Fatalf("Fallo al crear directorio preexistente: %v", err)
-		}
+		err := os.Mkdir(existingPath, 0755)
+		require.NoError(t, err, "Fallo al crear directorio preexistente") // require para fallar rápido si el setup falla
 
-		err := utils.EnsureDir(existingPath)
-		if err != nil {
-			t.Errorf("EnsureDir() error = %v, wantErr nil para directorio existente", err)
-		}
+		err = utils.EnsureDir(existingPath)
+		assert.NoError(t, err, "EnsureDir() no debería retornar error para un directorio existente")
+		assert.DirExists(t, existingPath, "El directorio preexistente aún debería existir")
 	})
 
 	t.Run("RutaExistePeroEsUnArchivo", func(t *testing.T) {
@@ -65,18 +56,12 @@ func TestEnsureDir(t *testing.T) {
 
 		filePath := filepath.Join(baseDir, "file.txt")
 		file, err := os.Create(filePath)
-		if err != nil {
-			t.Fatalf("Fallo al crear archivo de prueba: %v", err)
-		}
+		require.NoError(t, err, "Fallo al crear archivo de prueba")
 		file.Close()
 
 		err = utils.EnsureDir(filePath)
 		expectedErrorMsg := fmt.Sprintf("%s ya existe pero no es un directorio", filePath)
-		if err == nil {
-			t.Errorf("EnsureDir() error = nil, wantErr '%s'", expectedErrorMsg)
-		} else if err.Error() != expectedErrorMsg {
-			t.Errorf("EnsureDir() error = '%v', wantErr '%s'", err, expectedErrorMsg)
-		}
+		assert.EqualError(t, err, expectedErrorMsg, "EnsureDir() debería retornar un error específico")
 	})
 
 	t.Run("ErrorAlCrearDirectorio_RutaInvalida", func(t *testing.T) {
@@ -85,17 +70,14 @@ func TestEnsureDir(t *testing.T) {
 
 		fileAsPathComponent := filepath.Join(baseDir, "filecomponent")
 		f, ferr := os.Create(fileAsPathComponent)
-		if ferr != nil {
-			t.Fatalf("No se pudo crear el archivo para la prueba: %v", ferr)
-		}
+		require.NoError(t, ferr, "No se pudo crear el archivo para la prueba")
 		f.Close()
 
 		invalidPath := filepath.Join(fileAsPathComponent, "newdir")
 		err := utils.EnsureDir(invalidPath)
-
-		if err == nil {
-			t.Errorf("EnsureDir() con ruta inválida %s; error = nil, se esperaba un error", invalidPath)
-		}
+		assert.Error(t, err, "EnsureDir() con ruta inválida debería retornar un error")
+		// Opcionalmente, puedes ser más específico sobre el tipo de error si es posible y relevante
+		// assert.Contains(t, err.Error(), "not a directory") // O un mensaje similar del sistema operativo
 	})
 }
 
@@ -104,11 +86,10 @@ func TestParseHour(t *testing.T) {
 	now := time.Now() // Para comparar la fecha en el primer caso
 
 	tests := []struct {
-		name      string
-		hourStr   string
-		wantTime  time.Time
-		wantErr   bool
-		checkFunc func(t *testing.T, gotTime, wantTime time.Time, gotErr error)
+		name     string
+		hourStr  string
+		wantTime time.Time
+		wantErr  bool
 	}{
 		{
 			name:     "FormatoHHMMValido",
@@ -117,10 +98,9 @@ func TestParseHour(t *testing.T) {
 			wantErr:  false,
 		},
 		{
-			name:    "FormatoYYYYMMDDTHHMMValido",
-			hourStr: "2023-10-26T08:30",
-			// CORRECCIÓN AQUÍ: time.Parse sin offset devuelve UTC.
-			wantTime: time.Date(2023, 10, 26, 8, 30, 0, 0, time.UTC), // Cambiado de time.Local a time.UTC
+			name:     "FormatoYYYYMMDDTHHMMValido",
+			hourStr:  "2023-10-26T08:30",
+			wantTime: time.Date(2023, 10, 26, 8, 30, 0, 0, time.UTC),
 			wantErr:  false,
 		},
 		{
@@ -152,29 +132,23 @@ func TestParseHour(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotTime, gotErr := utils.ParseHour(tt.hourStr) // Asumiendo que ParseHour está en el paquete 'utils' que importas
+			gotTime, gotErr := utils.ParseHour(tt.hourStr)
 
-			if (gotErr != nil) != tt.wantErr {
-				t.Errorf("ParseHour() error = %v, wantErr %v", gotErr, tt.wantErr)
-				return
-			}
-
-			if !tt.wantErr {
-				// Comparamos usando time.Equal() que es más robusto para zonas horarias
-				if !gotTime.Equal(tt.wantTime) {
-					t.Errorf("ParseHour() gotTime = %v (%s), want %v (%s)", gotTime, gotTime.Location(), tt.wantTime, tt.wantTime.Location())
-				}
+			if tt.wantErr {
+				assert.Error(t, gotErr, "ParseHour() debería retornar un error")
+				assert.True(t, gotTime.IsZero(), "ParseHour() en caso de error, se esperaba tiempo cero")
 			} else {
-				if !gotTime.IsZero() {
-					t.Errorf("ParseHour() en caso de error, se esperaba tiempo cero, pero se obtuvo %v", gotTime)
-				}
+				assert.NoError(t, gotErr, "ParseHour() no debería retornar error")
+				// Usamos time.Equal() para comparar tiempos correctamente, especialmente con zonas horarias.
+				// assert.Equal no siempre funciona bien con time.Time si las ubicaciones son diferentes instancias
+				// aunque representen la misma zona horaria.
+				assert.True(t, tt.wantTime.Equal(gotTime), "ParseHour() gotTime = %v (%s), want %v (%s)", gotTime, gotTime.Location(), tt.wantTime, tt.wantTime.Location())
 			}
 		})
 	}
 }
 
-// --- Tests para GetLogItem (ACTUALIZADO con la estructura real de domain.LogType) ---
-
+// --- Tests para GetLogItem ---
 func TestGetLogItem(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -200,52 +174,47 @@ func TestGetLogItem(t *testing.T) {
 		{
 			name: "JSONValidoConAlgunosCamposFaltantes",
 			line: `{"level":"DEBUG","timestamp":"2023-10-27T11:00:00Z","pid":54321,"msg":"Partial log"}`,
-			// Los campos string faltantes serán "", int será 0
 			wantLog: domain.LogType{
 				Level:     "DEBUG",
 				Timestamp: "2023-10-27T11:00:00Z",
 				Pid:       54321,
-				Hostname:  "", // Valor cero para string
-				TraceId:   "", // Valor cero para string
-				SpanId:    "", // Valor cero para string
-				ParentId:  "", // Valor cero para string
+				Hostname:  "",
+				TraceId:   "",
+				SpanId:    "",
+				ParentId:  "",
 				Msg:       "Partial log",
 			},
-			wantErr: false, // json.Unmarshal no da error si faltan campos, los deja en su valor cero.
+			wantErr: false,
 		},
 		{
 			name:    "JSONInvalido_Malformed",
-			line:    `{"level":"ERROR","msg":"Malformed JSON`, // Falta la llave de cierre y comillas
-			wantLog: domain.LogType{},                         // Se espera el valor cero de LogType
+			line:    `{"level":"ERROR","msg":"Malformed JSON`,
+			wantLog: domain.LogType{},
 			wantErr: true,
 		},
 		{
-			name: "JSONConTipoIncorrectoParaCampoNumerico",
-			line: `{"level":"WARN","timestamp":"2023-10-28T12:00:00Z","pid":"not-a-number","msg":"PID type error"}`,
-			// json.Unmarshal devolverá un error porque "not-a-number" no puede ser parseado a int para Pid.
-			wantLog: domain.LogType{}, // Se espera el valor cero de LogType
+			name:    "JSONConTipoIncorrectoParaCampoNumerico",
+			line:    `{"level":"WARN","timestamp":"2023-10-28T12:00:00Z","pid":"not-a-number","msg":"PID type error"}`,
+			wantLog: domain.LogType{},
 			wantErr: true,
 		},
 		{
-			name: "JSONConTipoIncorrectoParaCampoString",
-			line: `{"level":123,"timestamp":"2023-10-28T13:00:00Z","pid":6789,"msg":"Level type error"}`,
-			// json.Unmarshal devolverá un error porque 123 no puede ser parseado a string para Level.
-			wantLog: domain.LogType{}, // Se espera el valor cero de LogType
+			name:    "JSONConTipoIncorrectoParaCampoString",
+			line:    `{"level":123,"timestamp":"2023-10-28T13:00:00Z","pid":6789,"msg":"Level type error"}`,
+			wantLog: domain.LogType{},
 			wantErr: true,
 		},
 		{
 			name:    "StringVacio",
 			line:    "",
 			wantLog: domain.LogType{},
-			wantErr: true, // json.Unmarshal con string vacío da error (normalmente EOF)
+			wantErr: true,
 		},
 		{
-			name: "JSONConSoloCamposDesconocidos",
-			line: `{"campo_desconocido":"valor","otro_campo":true}`,
-			// json.Unmarshal ignorará los campos desconocidos y no llenará ningún campo de LogType.
-			// No se producirá error.
-			wantLog: domain.LogType{}, // Todos los campos de LogType quedarán con su valor cero.
-			wantErr: false,
+			name:    "JSONConSoloCamposDesconocidos",
+			line:    `{"campo_desconocido":"valor","otro_campo":true}`,
+			wantLog: domain.LogType{}, // Se espera que los campos de LogType queden con su valor cero.
+			wantErr: false,            // json.Unmarshal ignora campos desconocidos por defecto.
 		},
 	}
 
@@ -253,22 +222,12 @@ func TestGetLogItem(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			gotLog, err := utils.GetLogItem(tt.line)
 
-			if (err != nil) != tt.wantErr {
-				t.Errorf("GetLogItem() error = %v, wantErr %v", err, tt.wantErr)
-				// Si el estado del error es inesperado, imprimir los valores para depuración
-				if err != nil {
-					t.Logf("Error recibido: %s", err.Error())
-				}
-				t.Logf("Línea de entrada: %s", tt.line)
-				return
-			}
-
-			if !tt.wantErr && !reflect.DeepEqual(gotLog, tt.wantLog) {
-				t.Errorf("GetLogItem() \ngotLog = %+v, \nwantLog = %+v", gotLog, tt.wantLog)
-			}
-
-			if tt.wantErr && !reflect.DeepEqual(gotLog, domain.LogType{}) {
-				t.Errorf("GetLogItem() en caso de error, se esperaba LogType cero, pero se obtuvo %+v", gotLog)
+			if tt.wantErr {
+				assert.Error(t, err, "GetLogItem() debería retornar un error")
+				assert.Equal(t, domain.LogType{}, gotLog, "GetLogItem() en caso de error, se esperaba LogType cero")
+			} else {
+				assert.NoError(t, err, "GetLogItem() no debería retornar error")
+				assert.Equal(t, tt.wantLog, gotLog, "GetLogItem() el log parseado no es el esperado")
 			}
 		})
 	}

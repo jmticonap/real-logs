@@ -1,7 +1,7 @@
 # RealLogs
 ## Kubernetes Pod Log Collector
 
-Este programa permite recolectar en tiempo real los logs de todos los pods que coincidan con un `labelSelector` dentro de un `namespace` específico en un clúster de Kubernetes. Está diseñado especialmente para escenarios como **pruebas de estrés**, donde los pods pueden reiniciarse o replicarse rápidamente.
+Este programa permite recolectar desde una carpeta los logs descargados y en tiempo real de todos los pods que coincidan con un `labelSelector` dentro de un `namespace` específico en un clúster de Kubernetes. Los cuales serán ingresados en la base de datos Sqlite. Está diseñado especialmente para escenarios como **pruebas de estrés**, donde los pods pueden reiniciarse o replicarse rápidamente.
 
 ## 🧩 Características
 
@@ -43,3 +43,19 @@ make run-dev
 ```sh
 make build
 ```
+
+## Flags
+En la ejecución los valores que provienen del `config.json` siempre será la segunda opción.
+- flow: Define el flujo que utiliza.
+  - realtime: se guardan los logs en tiempo real y toman reintentos de lectura si el pod se reinicia.
+  - fromdir: Define que a partir de un directorio con archivos de logs se leerán y se guardará toda la información en json en una base de datos Sqlite.
+  - Ejemplo:
+    ```sh
+    ./reallogs -flow=realtime -dir=./log-1 -srv=se-core-charge
+    ```
+    Nota: Descarga los logs en tiempo real y los guarda en la ruta relativa "./log-1". En `-srv` puede asignar el valor `*` para obtener los logs de todos los pods dentro del namespace.
+
+    ```sh
+    ./reallogs -flow=fromdir -dir=./log-1
+    ```
+    Nota: Carga la información de los logs en formato json que encuentre en "./log-1" en una base de datos Sqlite

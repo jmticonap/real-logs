@@ -31,6 +31,7 @@ func main() {
 	startFlag := flag.String("start", "", "Hora de inicio en formato HH:MM (opcional, también puede ir en config)")
 	endFlag := flag.String("end", "", "Hora de fin en formato HH:MM (opcional, también puede ir en config)")
 	batchSize := flag.Int("batchs", 50, "Largo del batch para las inserciones")
+	logPerform := flag.Bool("logperform", false, "Define si se procesan los datos del log de performance")
 	flag.Parse()
 
 	// pprof for CPU
@@ -93,7 +94,12 @@ func main() {
 			domain.CtxKeyType("dir"),
 			*dir,
 		)
-		service.RealTimeProcess(dirCtx, cfg)
+		logPerformCtx := context.WithValue(
+			dirCtx,
+			domain.CtxKeyType("logPerform"),
+			*logPerform,
+		)
+		service.RealTimeProcess(logPerformCtx, cfg)
 
 	case domain.BetweenTimes:
 		fmt.Println("Flujo BetweenTimes")
@@ -147,7 +153,12 @@ func main() {
 		} else {
 			log.Fatalln("No hay un directorio destino configurado.")
 		}
-		service.FromDir(ctx, targetDir)
+		logPerformCtx := context.WithValue(
+			ctx,
+			domain.CtxKeyType("logPerform"),
+			*logPerform,
+		)
+		service.FromDir(logPerformCtx, targetDir)
 	}
 
 	// pprof for Memory

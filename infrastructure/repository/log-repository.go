@@ -97,16 +97,20 @@ func StartGeneralLogWorker(ctx context.Context, batchSize int) {
 }
 
 func SaveLog(ctx context.Context, line string) {
+	logPerform := ctx.Value(domain.CtxKeyType("logPerform")).(bool)
 	log, err := utils.GetLogItem(line)
 	if err != nil {
 		return
 	}
 	GeneralChanPush(log)
-	logPerformanceInfo, err := utils.GetPerformanceLogInfo(log)
-	if err != nil {
-		return
+
+	if logPerform {
+		logPerformanceInfo, err := utils.GetPerformanceLogInfo(log)
+		if err != nil {
+			return
+		}
+		LogChanPush(log, logPerformanceInfo)
 	}
-	LogChanPush(log, logPerformanceInfo)
 }
 
 func insertBatchPerformanceLog(

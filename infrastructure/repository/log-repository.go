@@ -149,7 +149,7 @@ func insertBatchGeneralLog(
 
 	query := `
 		INSERT INTO general_logs
-		(level, timestamp, pid, hostname, trace_id, span_id, parent_id, msg)
+		(level, timestamp, hostname, trace_id, span_id, parent_id, msg)
 		VALUES 
 	`
 	queryValues := []string{}
@@ -159,14 +159,13 @@ func insertBatchGeneralLog(
 			params,
 			log.Level,
 			log.Timestamp,
-			log.Pid,
 			log.Hostname,
 			log.TraceId,
 			log.SpanId,
 			log.ParentId,
 			log.Msg,
 		)
-		queryValues = append(queryValues, "(?, ?, ?, ?, ?, ?, ?, ?)")
+		queryValues = append(queryValues, "(?, ?, ?, ?, ?, ?, ?)")
 	}
 	query += strings.Join(queryValues, ", ")
 

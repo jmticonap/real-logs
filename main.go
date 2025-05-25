@@ -5,8 +5,11 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	_ "net/http/pprof"
 	"os"
 	"os/signal"
+	"runtime"
+	"runtime/pprof"
 	"syscall"
 	"time"
 
@@ -17,6 +20,9 @@ import (
 	"github.com/jmticonap/real-logs/utils"
 )
 
+var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
+var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
+
 func main() {
 	// Flags
 	flow := flag.String("flow", domain.RealTime, "Define que flujo se utiliza")
@@ -25,8 +31,20 @@ func main() {
 	startFlag := flag.String("start", "", "Hora de inicio en formato HH:MM (opcional, también puede ir en config)")
 	endFlag := flag.String("end", "", "Hora de fin en formato HH:MM (opcional, también puede ir en config)")
 	batchSize := flag.Int("batchs", 50, "Largo del batch para las inserciones")
-	// logType := flag.String("log-type", "", "")
 	flag.Parse()
+
+	// pprof for CPU
+	if *cpuprofile != "" {
+		f, err := os.Create(*cpuprofile)
+		if err != nil {
+			log.Fatal("could not create CPU profile: ", err)
+		}
+		defer f.Close() // error handling omitted for example
+		if err := pprof.StartCPUProfile(f); err != nil {
+			log.Fatal("could not start CPU profile: ", err)
+		}
+		defer pprof.StopCPUProfile()
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -130,5 +148,19 @@ func main() {
 			log.Fatalln("No hay un directorio destino configurado.")
 		}
 		service.FromDir(ctx, targetDir)
+	}
+
+	// pprof for Memory
+	if *memprofile != "" {
+		f, err := os.Create(*memprofile)
+		if err != nil {
+			log.Fatal("could not create memory profile: ", err)
+		}
+		defer f.Close()
+		runtime.GC()
+
+		if err := pprof.Lookup("allocs").WriteTo(f, 0); err != nil {
+			log.Fatal("could not write memory profile: ", err)
+		}
 	}
 }

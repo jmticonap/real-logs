@@ -2,3 +2,5 @@
 reallogs
 *.db
 **/*.db
+memprofile*
+cpuprofile*

@@ -19,7 +19,6 @@ type LogChanDataType struct {
 type LogType struct {
 	Level     string `json:"level"`
 	Timestamp string `json:"timestamp"`
-	Pid       int    `json:"pid"`
 	Hostname  string `json:"hostname"`
 	TraceId   string `json:"traceId"`
 	SpanId    string `json:"spanId"`

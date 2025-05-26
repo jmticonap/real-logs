@@ -59,3 +59,6 @@ En la ejecución los valores que provienen del `config.json` siempre será la se
     ./reallogs -flow=fromdir -dir=./log-1
     ```
     Nota: Carga la información de los logs en formato json que encuentre en "./log-1" en una base de datos Sqlite
+
+## Perfil de memoria actual
+Para una prueba con un volumen de datos de 245Mb se tiene un resultante en memoria de 1104Mb. 

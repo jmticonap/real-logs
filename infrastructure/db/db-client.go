@@ -3,39 +3,50 @@ package db
 import (
 	"database/sql"
 	"log"
+	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/jmticonap/real-logs/domain"
 	_ "github.com/mattn/go-sqlite3"
 )
 
-var db *sql.DB
+var db = map[string]*sql.DB{}
+var dbMutex sync.Mutex
 
 func OpenDb(params domain.StrObject) *sql.DB {
 	var err error
-
-	if db != nil {
-		return db
-	}
-
+	var dir string
 	var dbPath string
-	if dir, dirOk := params["dir"]; dirOk {
+	var dirOk bool
+
+	dbMutex.Lock()
+	if dir, dirOk = params["dir"]; dirOk {
+		os.Mkdir(dir, DirGrants(true, true, true))
 		dbPath = filepath.Join(dir, "log.db")
 	} else {
+		dir = "."
 		dbPath = "./log.db"
 	}
 
-	db, err = sql.Open("sqlite3", dbPath)
+	if _, dbOk := db[dir]; dbOk {
+		dbMutex.Unlock()
+		return db[dir]
+	}
+
+	db[dir], err = sql.Open("sqlite3", dbPath)
 	if err != nil {
+		dbMutex.Unlock()
 		log.Fatalf("Open Db error: %s", err)
 	}
 
-	err = db.Ping()
+	err = db[dir].Ping()
 	if err != nil {
+		dbMutex.Unlock()
 		log.Fatalf("Ping error: %s", err)
 	}
 
-	_, err = db.Exec(`
+	_, err = db[dir].Exec(`
 		DROP TABLE IF EXISTS performance_logs;
 		CREATE TABLE IF NOT EXISTS performance_logs (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -47,12 +58,13 @@ func OpenDb(params domain.StrObject) *sql.DB {
 		);
 	`)
 	if err != nil {
+		dbMutex.Unlock()
 		log.Fatal(err)
 	} else {
 		log.Println("Tabla creada o ya existía [performance_logs]")
 	}
 
-	_, err = db.Exec(`
+	_, err = db[dir].Exec(`
 		DROP TABLE IF EXISTS general_logs;
 		CREATE TABLE IF NOT EXISTS general_logs (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -67,6 +79,7 @@ func OpenDb(params domain.StrObject) *sql.DB {
 		);
 	`)
 	if err != nil {
+		dbMutex.Unlock()
 		log.Fatal(err)
 	} else {
 		log.Println("Tabla creada o ya existía [general_logs]")
@@ -74,5 +87,24 @@ func OpenDb(params domain.StrObject) *sql.DB {
 
 	log.Println("Open successfully...")
 
-	return db
+	dbMutex.Unlock()
+	return db[dir]
+}
+
+func DirGrants(leer bool, escribir bool, ejecutar bool) os.FileMode {
+	perm := 0
+	if leer {
+		perm |= 4
+	}
+	if escribir {
+		perm |= 2
+	}
+	if ejecutar {
+		perm |= 1
+	}
+	// Aplicar los permisos para el propietario, grupo y otros de forma idéntica
+	// para este ejemplo simple. Puedes ajustarlo si necesitas más granularidad.
+	fileMode := os.FileMode(perm<<6 | perm<<3 | perm)
+	// Añadir el bit de directorio
+	return fileMode | os.ModeDir
 }

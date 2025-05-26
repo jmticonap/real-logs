@@ -97,16 +97,20 @@ func StartGeneralLogWorker(ctx context.Context, batchSize int) {
 }
 
 func SaveLog(ctx context.Context, line string) {
+	logPerform := ctx.Value(domain.CtxKeyType("logPerform")).(bool)
 	log, err := utils.GetLogItem(line)
 	if err != nil {
 		return
 	}
 	GeneralChanPush(log)
-	logPerformanceInfo, err := utils.GetPerformanceLogInfo(log)
-	if err != nil {
-		return
+
+	if logPerform {
+		logPerformanceInfo, err := utils.GetPerformanceLogInfo(log)
+		if err != nil {
+			return
+		}
+		LogChanPush(log, logPerformanceInfo)
 	}
-	LogChanPush(log, logPerformanceInfo)
 }
 
 func insertBatchPerformanceLog(
@@ -149,7 +153,7 @@ func insertBatchGeneralLog(
 
 	query := `
 		INSERT INTO general_logs
-		(level, timestamp, pid, hostname, trace_id, span_id, parent_id, msg)
+		(level, timestamp, hostname, trace_id, span_id, parent_id, msg)
 		VALUES 
 	`
 	queryValues := []string{}
@@ -159,14 +163,13 @@ func insertBatchGeneralLog(
 			params,
 			log.Level,
 			log.Timestamp,
-			log.Pid,
 			log.Hostname,
 			log.TraceId,
 			log.SpanId,
 			log.ParentId,
 			log.Msg,
 		)
-		queryValues = append(queryValues, "(?, ?, ?, ?, ?, ?, ?, ?)")
+		queryValues = append(queryValues, "(?, ?, ?, ?, ?, ?, ?)")
 	}
 	query += strings.Join(queryValues, ", ")
 

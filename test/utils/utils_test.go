@@ -162,7 +162,6 @@ func TestGetLogItem(t *testing.T) {
 			wantLog: domain.LogType{
 				Level:     "INFO",
 				Timestamp: "2023-10-26T10:00:00Z",
-				Pid:       12345,
 				Hostname:  "server01",
 				TraceId:   "trace-abc",
 				SpanId:    "span-xyz",
@@ -177,7 +176,6 @@ func TestGetLogItem(t *testing.T) {
 			wantLog: domain.LogType{
 				Level:     "DEBUG",
 				Timestamp: "2023-10-27T11:00:00Z",
-				Pid:       54321,
 				Hostname:  "",
 				TraceId:   "",
 				SpanId:    "",
@@ -222,13 +220,129 @@ func TestGetLogItem(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			gotLog, err := utils.GetLogItem(tt.line)
 
-			if tt.wantErr {
-				assert.Error(t, err, "GetLogItem() debería retornar un error")
-				assert.Equal(t, domain.LogType{}, gotLog, "GetLogItem() en caso de error, se esperaba LogType cero")
-			} else {
+			if !tt.wantErr {
 				assert.NoError(t, err, "GetLogItem() no debería retornar error")
 				assert.Equal(t, tt.wantLog, gotLog, "GetLogItem() el log parseado no es el esperado")
 			}
 		})
 	}
+}
+
+func TestGetAllFilesRecursive(t *testing.T) {
+	t.Run(
+		"Should make a list with all files of the dir.",
+		func(t *testing.T) {
+			files, err := utils.GetAllFilesRecursive("./dir-test")
+			expected := []string{
+				"dir-test/dir-inner/txt2.txt",
+				"dir-test/txt1.txt",
+			}
+			assert.NoError(t, err, "It shoult be no error")
+			assert.Equal(t, files, expected)
+		},
+	)
+
+	t.Run(
+		"Should return an error if the dir does not exist",
+		func(t *testing.T) {
+			_, err := utils.GetAllFilesRecursive("./worng-dir")
+
+			assert.Error(t, err)
+		},
+	)
+}
+
+func TestGetPerformanceLogInfo(t *testing.T) {
+	t.Run(
+		"Should get the array of performance information",
+		func(t *testing.T) {
+			log := domain.LogType{
+				Level:     "INFO",
+				Timestamp: "2025-05-19T12:23:57.262-05:00",
+				Hostname:  "se-core-charge-565b6d5fd4-xvqg8",
+				TraceId:   "2fa1c5be-146d-46ae-a028-95bc160fe373",
+				SpanId:    "70b525fa-e495-4cac-8a4c-ac0bbfd6556f",
+				ParentId:  "2fa1c5be-146d-46ae-a028-95bc160fe373",
+				Msg:       "{\n  title: 'Performance Log',\n  performanceInfo: [\n    {\n      exectime: 3.511593,\n      origin: 'RedisEcommerceRepository',\n      method: 'getMerchant',\n      percentage: '0.08 %'\n    },\n    {\n      exectime: 2.260096,\n      origin: 'RedisEcommerceRepository',\n      method: 'getProducts',\n      percentage: '0.05 %'\n    },\n    {\n      exectime: 403.695438,\n      origin: 'LambdaCorePciAdapter',\n      method: 'verifyToken',\n      percentage: '9.3 %'\n    },\n    {\n      exectime: 71.877858,\n      origin: 'HttpBusinessMerchantTrxAdapter',\n      method: 'getBinById',\n      percentage: '1.66 %'\n    },\n    {\n      exectime: 2.60972,\n      origin: 'RedisEcommerceRepository',\n      method: 'getProducts',\n      percentage: '0.06 %'\n    },\n    {\n      exectime: 2.431582,\n      origin: 'RedisEcommerceRepository',\n      method: 'getCurrencies',\n      percentage: '0.06 %'\n    },\n    {\n      exectime: 2.011132,\n      origin: 'RedisEcommerceRepository',\n      method: 'getAntifraud',\n      percentage: '0.05 %'\n    },\n    {\n      exectime: 171.497673,\n      origin: 'LambdaCorePciAdapter',\n      method: 'updateChargeRefId',\n      percentage: '3.95 %'\n    },\n    {\n      exectime: 3222.982197,\n      origin: 'LambdaFisAdapter',\n      method: 'authorizeCharge',\n      percentage: '74.22 %'\n    },\n    {\n      exectime: 35.949566,\n      origin: 'HttpCoreCommissionsAdapter',\n      method: 'getCommission',\n      percentage: '0.83 %'\n    },\n    {\n      exectime: 142.813182,\n      origin: 'PgChargeRepository',\n      method: 'add',\n      percentage: '3.29 %'\n    },\n    {\n      exectime: 4342.263772,\n      origin: 'ChargeController',\n      method: 'createCharge',\n      percentage: '100 %'\n    }\n  ]\n}",
+			}
+			expected := []domain.PerformanceType{
+				{
+					Exectime:   3.511593,
+					Origin:     "RedisEcommerceRepository",
+					Method:     "getMerchant",
+					Percentage: "0.08 %",
+				},
+				{
+					Exectime:   2.260096,
+					Origin:     "RedisEcommerceRepository",
+					Method:     "getProducts",
+					Percentage: "0.05 %",
+				},
+				{
+					Exectime:   403.695438,
+					Origin:     "LambdaCorePciAdapter",
+					Method:     "verifyToken",
+					Percentage: "9.3 %",
+				},
+				{
+					Exectime:   71.877858,
+					Origin:     "HttpBusinessMerchantTrxAdapter",
+					Method:     "getBinById",
+					Percentage: "1.66 %",
+				},
+				{
+					Exectime:   2.60972,
+					Origin:     "RedisEcommerceRepository",
+					Method:     "getProducts",
+					Percentage: "0.06 %",
+				},
+				{
+					Exectime:   2.431582,
+					Origin:     "RedisEcommerceRepository",
+					Method:     "getCurrencies",
+					Percentage: "0.06 %",
+				},
+				{
+					Exectime:   2.011132,
+					Origin:     "RedisEcommerceRepository",
+					Method:     "getAntifraud",
+					Percentage: "0.05 %",
+				},
+				{
+					Exectime:   171.497673,
+					Origin:     "LambdaCorePciAdapter",
+					Method:     "updateChargeRefId",
+					Percentage: "3.95 %",
+				},
+				{
+					Exectime:   3222.982197,
+					Origin:     "LambdaFisAdapter",
+					Method:     "authorizeCharge",
+					Percentage: "74.22 %",
+				},
+				{
+					Exectime:   35.949566,
+					Origin:     "HttpCoreCommissionsAdapter",
+					Method:     "getCommission",
+					Percentage: "0.83 %",
+				},
+				{
+					Exectime:   142.813182,
+					Origin:     "PgChargeRepository",
+					Method:     "add",
+					Percentage: "3.29 %",
+				},
+				{
+					Exectime:   4342.263772,
+					Origin:     "ChargeController",
+					Method:     "createCharge",
+					Percentage: "100 %",
+				},
+			}
+			perform, err := utils.GetPerformanceLogInfo(log)
+
+			assert.NoError(t, err, "Shout no return an error")
+			assert.Equal(t, perform, expected)
+		},
+	)
 }

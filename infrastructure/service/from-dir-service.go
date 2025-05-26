@@ -6,11 +6,13 @@ import (
 	"log"
 	"os"
 
+	"github.com/jmticonap/real-logs/domain"
 	"github.com/jmticonap/real-logs/infrastructure/repository"
 	"github.com/jmticonap/real-logs/utils"
 )
 
 func FromDir(ctx context.Context, dirPath string) {
+	logPerform := ctx.Value(domain.CtxKeyType("logPerform")).(bool)
 	paths, err := utils.GetAllFilesRecursive(dirPath)
 	if err != nil {
 		log.Fatalf("Error reading dir: %s", err)
@@ -31,11 +33,13 @@ func FromDir(ctx context.Context, dirPath string) {
 			}
 			repository.GeneralChanPush(log)
 
-			logPerformanceInfo, err := utils.GetPerformanceLogInfo(log)
-			if err != nil {
-				continue
+			if logPerform {
+				logPerformanceInfo, err := utils.GetPerformanceLogInfo(log)
+				if err != nil {
+					continue
+				}
+				repository.LogChanPush(log, logPerformanceInfo)
 			}
-			repository.LogChanPush(log, logPerformanceInfo)
 		}
 	}
 }

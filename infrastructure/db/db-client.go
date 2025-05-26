@@ -5,18 +5,22 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/jmticonap/real-logs/domain"
 	_ "github.com/mattn/go-sqlite3"
 )
 
 var db = map[string]*sql.DB{}
+var dbMutex sync.Mutex
 
 func OpenDb(params domain.StrObject) *sql.DB {
 	var err error
 	var dir string
 	var dbPath string
 	var dirOk bool
+
+	dbMutex.Lock()
 	if dir, dirOk = params["dir"]; dirOk {
 		os.Mkdir(dir, DirGrants(true, true, true))
 		dbPath = filepath.Join(dir, "log.db")
@@ -26,16 +30,19 @@ func OpenDb(params domain.StrObject) *sql.DB {
 	}
 
 	if _, dbOk := db[dir]; dbOk {
+		dbMutex.Unlock()
 		return db[dir]
 	}
 
 	db[dir], err = sql.Open("sqlite3", dbPath)
 	if err != nil {
+		dbMutex.Unlock()
 		log.Fatalf("Open Db error: %s", err)
 	}
 
 	err = db[dir].Ping()
 	if err != nil {
+		dbMutex.Unlock()
 		log.Fatalf("Ping error: %s", err)
 	}
 
@@ -51,6 +58,7 @@ func OpenDb(params domain.StrObject) *sql.DB {
 		);
 	`)
 	if err != nil {
+		dbMutex.Unlock()
 		log.Fatal(err)
 	} else {
 		log.Println("Tabla creada o ya existía [performance_logs]")
@@ -71,6 +79,7 @@ func OpenDb(params domain.StrObject) *sql.DB {
 		);
 	`)
 	if err != nil {
+		dbMutex.Unlock()
 		log.Fatal(err)
 	} else {
 		log.Println("Tabla creada o ya existía [general_logs]")
@@ -78,6 +87,7 @@ func OpenDb(params domain.StrObject) *sql.DB {
 
 	log.Println("Open successfully...")
 
+	dbMutex.Unlock()
 	return db[dir]
 }
 

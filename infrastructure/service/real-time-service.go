@@ -19,7 +19,9 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-func RealTimeProcess(ctx context.Context, cfg *domain.Config) {
+func RealTimeProcess(
+	ctx context.Context, cfg *domain.Config,
+) {
 	clientset, err := GetKubernetesClient()
 	if err != nil {
 		log.Fatalf("Error creando cliente: %v", err)
@@ -29,9 +31,12 @@ func RealTimeProcess(ctx context.Context, cfg *domain.Config) {
 	activeLogs := make(map[string]context.CancelFunc)
 	var mu sync.Mutex
 
-	watcher, err := clientset.CoreV1().Pods(cfg.Namespace).Watch(ctx, metav1.ListOptions{
-		LabelSelector: getLabelSelector(ctx, cfg),
-	})
+	watcher, err := clientset.
+		CoreV1().
+		Pods(cfg.Namespace).
+		Watch(ctx, metav1.ListOptions{
+			LabelSelector: getLabelSelector(ctx, cfg),
+		})
 	if err != nil {
 		log.Fatalf("Error creando watcher: %v", err)
 	}
@@ -184,11 +189,14 @@ func getDir(ctx context.Context, cfg *domain.Config) string {
 
 func getLabelSelector(ctx context.Context, cfg *domain.Config) string {
 	srvName := ctx.Value(domain.CtxKeyType("srvName"))
-	if srvName != "" {
-		return srvName.(string)
-	} else if srvName == "*" {
-		return ""
+	var result string
+	if srvName == "all" {
+		result = ""
+	} else if srvName != "" {
+		result = srvName.(string)
 	} else {
-		return cfg.LabelSelector
+		result = cfg.LabelSelector
 	}
+
+	return result
 }

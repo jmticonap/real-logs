@@ -28,7 +28,7 @@ go mod tidy
 
 ```json
 {
-  "namespace": "ecommerce-qas",
+  "namespace": "ecommerce-dev",
   "labelSelector": "app=se-core-charge",
   "logDirectory": "./logs"
 }
@@ -53,7 +53,7 @@ En la ejecución los valores que provienen del `config.json` siempre será la se
     ```sh
     ./reallogs -flow=realtime -dir=./log-1 -srv=se-core-charge
     ```
-    Nota: Descarga los logs en tiempo real y los guarda en la ruta relativa "./log-1". En `-srv` puede asignar el valor `*` para obtener los logs de todos los pods dentro del namespace.
+    Nota: Descarga los logs en tiempo real y los guarda en la ruta relativa "./log-1". En `-srv` puede asignar el valor `all` para obtener los logs de todos los pods dentro del namespace.
 
     ```sh
     ./reallogs -flow=fromdir -dir=./log-1

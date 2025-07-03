@@ -100,6 +100,25 @@ func main() {
 			*logPerform,
 		)
 		service.RealTimeProcess(logPerformCtx, cfg)
+	case domain.FullLog:
+		fmt.Println("Flujo FullLog")
+		log.Println("Download all logs from pods.")
+		srvCtx := context.WithValue(
+			ctx,
+			domain.CtxKeyType("srvName"),
+			*srvName,
+		)
+		dirCtx := context.WithValue(
+			srvCtx,
+			domain.CtxKeyType("dir"),
+			*dir,
+		)
+		logPerformCtx := context.WithValue(
+			dirCtx,
+			domain.CtxKeyType("logPerform"),
+			*logPerform,
+		)
+		service.FullLogProcess(logPerformCtx, cfg)
 
 	case domain.BetweenTimes:
 		fmt.Println("Flujo BetweenTimes")

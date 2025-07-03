@@ -1,5 +1,5 @@
 {
-  "namespace": "ecommerce-qas",
+  "namespace": "ecommerce-dev",
   "labelSelector": "app=se-core-charge",
-  "logDirectory": "./logs-1"
+  "logDirectory": "./log-sb"
 }

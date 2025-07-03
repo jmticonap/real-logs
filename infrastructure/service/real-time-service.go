@@ -193,7 +193,7 @@ func getLabelSelector(ctx context.Context, cfg *domain.Config) string {
 	if srvName == "all" {
 		result = ""
 	} else if srvName != "" {
-		result = srvName.(string)
+		result = fmt.Sprintf("app=%s", srvName.(string))
 	} else {
 		result = cfg.LabelSelector
 	}

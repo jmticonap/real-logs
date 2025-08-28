@@ -1,10 +1,19 @@
 .PHONY: run-dev build test pprof-mem test-mem pprof-cpu test-cpu test-race
 
+VERSION ?= dev
+TAG ?= v1.1.0
+
 run-dev:
 	@go run main.go $(ARGS)
 
 build:
-	@go build -o reallogs main.go
+	@go build -ldflags "-X main.Version=$(VERSION)" -o reallogs main.go
+
+build-tagged:
+	@$(MAKE) build VERSION="$(TAG)"
+
+add-tag:
+	@git tag -a $(TAG) -m "Release de la versión $(TAG)"
 
 test:
 	@go test -v ./...

@@ -27,7 +27,7 @@ func main() {
 	// Flags
 	flow := flag.String("flow", domain.RealTime, "Define que flujo se utiliza")
 	dir := flag.String("dir", "", "Define el path del directorio objetivo")
-	srvName := flag.String("srv", "", "Define el nombre del servicio con el cual se filtran los pods")
+	srvName := flag.String("srv", "all", "Define el nombre del servicio con el cual se filtran los pods")
 	startFlag := flag.String("start", "", "Hora de inicio en formato HH:MM (opcional, también puede ir en config)")
 	endFlag := flag.String("end", "", "Hora de fin en formato HH:MM (opcional, también puede ir en config)")
 	batchSize := flag.Int("batchs", 50, "Largo del batch para las inserciones")
@@ -100,6 +100,25 @@ func main() {
 			*logPerform,
 		)
 		service.RealTimeProcess(logPerformCtx, cfg)
+	case domain.FullLog:
+		fmt.Println("Flujo FullLog")
+		log.Println("Download all logs from pods.")
+		srvCtx := context.WithValue(
+			ctx,
+			domain.CtxKeyType("srvName"),
+			*srvName,
+		)
+		dirCtx := context.WithValue(
+			srvCtx,
+			domain.CtxKeyType("dir"),
+			*dir,
+		)
+		logPerformCtx := context.WithValue(
+			dirCtx,
+			domain.CtxKeyType("logPerform"),
+			*logPerform,
+		)
+		service.FullLogProcess(logPerformCtx, cfg)
 
 	case domain.BetweenTimes:
 		fmt.Println("Flujo BetweenTimes")

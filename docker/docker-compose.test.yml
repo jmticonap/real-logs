@@ -1,0 +1,38 @@
+services:
+  test_postgres:
+    image: postgres:15
+    container_name: test_postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: core_dev
+    volumes:
+      - ./test_init.sql:/docker-entrypoint-initdb.d/test_init.sql
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "test"]
+      interval: 2s
+      timeout: 2s
+      retries: 10
+    networks:
+      - testnet
+
+  app:
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile
+    container_name: test_app
+    depends_on:
+      test_postgres:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: test_postgres
+    networks:
+      - testnet
+    command: go test ./test/... -v -cover
+
+volumes:
+  pg_data:
+
+networks:
+  testnet:

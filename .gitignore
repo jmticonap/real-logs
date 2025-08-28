@@ -4,3 +4,5 @@ reallogs
 **/*.db
 memprofile*
 cpuprofile*
+
+.DS_Store

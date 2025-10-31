@@ -124,6 +124,9 @@ func main() {
 		)
 		service.FullLogProcess(logPerformCtx, cfg)
 
+		repository.CloseChannels()
+		repository.WaitWorkers()
+
 	case domain.BetweenTimes:
 		fmt.Println("Flujo BetweenTimes")
 		log.Println("Download logs between times.")
@@ -165,6 +168,9 @@ func main() {
 		)
 		service.BetweenTimesProcess(ctx, cfg, startTime, endTime)
 
+		repository.CloseChannels()
+		repository.WaitWorkers()
+
 	case domain.FromDir:
 		var targetDir string
 		if dir != nil && *dir != "" {
@@ -182,6 +188,8 @@ func main() {
 			*logPerform,
 		)
 		service.FromDir(logPerformCtx, targetDir)
+		repository.CloseChannels()
+		repository.WaitWorkers()
 	}
 
 	// pprof for Memory

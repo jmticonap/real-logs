@@ -47,7 +47,6 @@ func OpenDb(params domain.StrObject) *sql.DB {
 	}
 
 	_, err = db[dir].Exec(`
-		DROP TABLE IF EXISTS performance_logs;
 		CREATE TABLE IF NOT EXISTS performance_logs (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			trace_id TEXT NOT NULL,
@@ -65,7 +64,6 @@ func OpenDb(params domain.StrObject) *sql.DB {
 	}
 
 	_, err = db[dir].Exec(`
-		DROP TABLE IF EXISTS general_logs;
 		CREATE TABLE IF NOT EXISTS general_logs (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			level CHARACTER(15),

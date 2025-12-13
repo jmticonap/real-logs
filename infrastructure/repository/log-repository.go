@@ -117,6 +117,17 @@ func StartGeneralLogWorker(ctx context.Context, batchSize int) {
 }
 
 func SaveLog(ctx context.Context, line string) {
+	enableDBWrite := true // Default to true
+
+	enableDBWriteVal := ctx.Value(domain.CtxKeyType("enableDBWrite"))
+	if enableDBWriteVal != nil {
+		enableDBWrite = enableDBWriteVal.(bool)
+	}
+
+	if !enableDBWrite {
+		return // Do not process or save logs if DB writing is disabled
+	}
+
 	logPerform := ctx.Value(domain.CtxKeyType("logPerform")).(bool)
 	log, err := utils.GetLogItem(line)
 	if err != nil {

@@ -33,6 +33,7 @@ func main() {
 	endFlag := flag.String("end", "", "Hora de fin en formato HH:MM (opcional, también puede ir en config)")
 	batchSize := flag.Int("batchs", 50, "Largo del batch para las inserciones")
 	logPerform := flag.Bool("logperform", false, "Define si se procesan los datos del log de performance")
+	fsize := flag.Int("fsize", 15, "file size in MB")
 	flag.Parse()
 
 	// pprof for CPU
@@ -66,6 +67,9 @@ func main() {
 	}
 	if nameSpace != nil && *nameSpace != "" {
 		cfg.Namespace = *nameSpace
+	}
+	if fsize != nil {
+		cfg.Fsize = *fsize
 	}
 
 	if dir != nil && *dir != "" {
@@ -103,7 +107,12 @@ func main() {
 			domain.CtxKeyType("logPerform"),
 			*logPerform,
 		)
-		service.RealTimeProcess(logPerformCtx, cfg)
+		enableDBWriteCtx := context.WithValue(
+			logPerformCtx,
+			domain.CtxKeyType("enableDBWrite"),
+			false, // Disable DB writing for RealTime flow
+		)
+		service.RealTimeProcess(enableDBWriteCtx, cfg)
 	case domain.FullLog:
 		fmt.Println("Flujo FullLog")
 		log.Println("Download all logs from pods.")
@@ -122,7 +131,12 @@ func main() {
 			domain.CtxKeyType("logPerform"),
 			*logPerform,
 		)
-		service.FullLogProcess(logPerformCtx, cfg)
+		enableDBWriteCtx := context.WithValue(
+			logPerformCtx,
+			domain.CtxKeyType("enableDBWrite"),
+			true, // Enable DB writing for FullLog flow
+		)
+		service.FullLogProcess(enableDBWriteCtx, cfg)
 
 		repository.CloseChannels()
 		repository.WaitWorkers()
@@ -166,7 +180,12 @@ func main() {
 			startTime.Format("15:04"),
 			endTime.Format("15:04"),
 		)
-		service.BetweenTimesProcess(ctx, cfg, startTime, endTime)
+		enableDBWriteCtx := context.WithValue(
+			ctx,
+			domain.CtxKeyType("enableDBWrite"),
+			true, // Enable DB writing for BetweenTimes flow
+		)
+		service.BetweenTimesProcess(enableDBWriteCtx, cfg, startTime, endTime)
 
 		repository.CloseChannels()
 		repository.WaitWorkers()
@@ -187,7 +206,12 @@ func main() {
 			domain.CtxKeyType("logPerform"),
 			*logPerform,
 		)
-		service.FromDir(logPerformCtx, targetDir)
+		enableDBWriteCtx := context.WithValue(
+			logPerformCtx,
+			domain.CtxKeyType("enableDBWrite"),
+			true, // Enable DB writing for FromDir flow
+		)
+		service.FromDir(enableDBWriteCtx, targetDir)
 		repository.CloseChannels()
 		repository.WaitWorkers()
 	}

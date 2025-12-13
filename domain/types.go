@@ -10,6 +10,7 @@ type Config struct {
 	LogDirectory  string `json:"logDirectory"`
 	StartTime     string `json:"startTime"`
 	EndTime       string `json:"endTime"`
+	Fsize         int    `json:"fsize"`
 }
 
 type LogChanDataType struct {

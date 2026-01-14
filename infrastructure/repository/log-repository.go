@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/jmticonap/real-logs/domain"
@@ -15,6 +16,7 @@ import (
 
 var logChan = make(chan domain.LogChanDataType, 1000)
 var generalLogChan = make(chan domain.LogType, 1000)
+var wg sync.WaitGroup
 
 func GeneralChanPush(logData domain.LogType) {
 	generalLogChan <- logData
@@ -49,7 +51,9 @@ func LogChanPush(
 }
 
 func StartWriterWorker(ctx context.Context, batchSize int) {
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		db := db.OpenDb(domain.StrObject{})
 		var batch []domain.LogChanDataType
 		for {
@@ -61,7 +65,14 @@ func StartWriterWorker(ctx context.Context, batchSize int) {
 				log.Println("Finalizando SQLite writer")
 				return
 
-			case LogQueryData := <-logChan:
+			case LogQueryData, ok := <-logChan:
+				if !ok {
+					if len(batch) > 0 {
+						insertBatchPerformanceLog(ctx, db, &batch)
+					}
+					log.Println("Finalizando SQLite writer por canal cerrado")
+					return
+				}
 				batch = append(batch, LogQueryData)
 
 				if len(batch) >= batchSize {
@@ -73,7 +84,9 @@ func StartWriterWorker(ctx context.Context, batchSize int) {
 }
 
 func StartGeneralLogWorker(ctx context.Context, batchSize int) {
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		db := db.OpenDb(domain.StrObject{})
 		var batch []domain.LogType
 		for {
@@ -85,7 +98,14 @@ func StartGeneralLogWorker(ctx context.Context, batchSize int) {
 				log.Println("Finalizando general log SQLite writer")
 				return
 
-			case logData := <-generalLogChan:
+			case logData, ok := <-generalLogChan:
+				if !ok {
+					if len(batch) > 0 {
+						insertBatchGeneralLog(ctx, db, &batch)
+					}
+					log.Println("Finalizando general log SQLite writer por canal cerrado")
+					return
+				}
 				batch = append(batch, logData)
 
 				if len(batch) >= batchSize {
@@ -184,4 +204,13 @@ func insertBatchGeneralLog(
 		fmt.Printf("\r[General] Saved data: BatchSize=%d", len(*batch))
 	}
 	*batch = (*batch)[:0]
+}
+
+func CloseChannels() {
+	close(generalLogChan)
+	close(logChan)
+}
+
+func WaitWorkers() {
+	wg.Wait()
 }

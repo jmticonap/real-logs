@@ -1,64 +1,129 @@
-# RealLogs
-## Kubernetes Pod Log Collector
+# RealLogs: Kubernetes Pod Log Collector
 
-Este programa permite recolectar desde una carpeta los logs descargados y en tiempo real de todos los pods que coincidan con un `labelSelector` dentro de un `namespace` específico en un clúster de Kubernetes. Los cuales serán ingresados en la base de datos Sqlite. Está diseñado especialmente para escenarios como **pruebas de estrés**, donde los pods pueden reiniciarse o replicarse rápidamente.
+**RealLogs** is a powerful tool designed to collect logs from Kubernetes pods. It can capture logs in real-time, from a specific directory, within a time range, or all at once. The collected logs are stored in a SQLite database, making it ideal for scenarios like stress testing where pods can restart or replicate quickly.
 
-## 🧩 Características
+## 🧩 Key Features
 
-- Recolecta logs en tiempo real (`stream`).
-- Detecta cuando un pod se reinicia y reanuda la descarga de logs.
-- Crea nuevos archivos de log si se crean nuevos pods.
-- Guarda todos los logs en archivos separados, uno por pod.
-- Usa un archivo `config.json` para su configuración.
-- Crea automáticamente el directorio de logs si no existe.
+- **Real-time Log Collection**: Stream logs as they happen.
+- **Directory-based Collection**: Process logs from a specified directory.
+- **Time-based Collection**: Gather logs within a specific time window.
+- **Full Log Dump**: Download all available logs from pods.
+- **Automatic Pod Detection**: Detects pod restarts and new pod creations to ensure continuous logging.
+- **Organized Storage**: Saves logs in a structured SQLite database.
+- **Flexible Configuration**: Use a `config.json` file or command-line flags for setup.
 
-## 🛠️ Requisitos
+## 🛠️ Requirements
 
 - Go 1.18+
-- Acceso a un clúster de Kubernetes configurado vía:
-  - `InClusterConfig` (dentro del clúster) o
-  - `~/.kube/config` (fuera del clúster)
-- Permisos para acceder a los pods y leer logs.
+- Access to a Kubernetes cluster configured via:
+  - `InClusterConfig` (inside the cluster)
+  - `~/.kube/config` (outside the cluster)
+- Permissions to access pods and read logs.
 
-## Descarga de dependencias
+## 🚀 Getting Started
+
+### Dependency Installation
+
 ```sh
 go mod tidy
 ```
-## 📁 Estructura esperada del archivo `config.json`
+
+### Configuration File
+
+The `config.json` file is used to configure the application. Here is the expected structure:
 
 ```json
 {
-  "namespace": "ecommerce-dev",
-  "labelSelector": "app=se-core-charge",
-  "logDirectory": "./logs"
+  "namespace": "your-namespace",
+  "labelSelector": "app=your-app",
+  "logDirectory": "./logs",
+  "startTime": "14:00",
+  "endTime": "15:00"
 }
 ```
 
-## Ejecución con Makefile
-- Ejecutar en modo desarrollo
+- `namespace`: The Kubernetes namespace to target.
+- `labelSelector`: The label to filter pods by.
+- `logDirectory`: The directory to store log files.
+- `startTime` and `endTime`: The time range for the `btimes` flow.
+
+### Makefile Execution
+
+- **Run in development mode**:
+  ```sh
+  make run-dev
+  ```
+- **Build the application**:
+  ```sh
+  make build
+  ```
+
+## ⚙️ Usage and Flows
+
+**RealLogs** offers four main flows, which can be selected using the `-flow` flag.
+
+### 1. `realtime` Flow
+
+This flow captures logs in real-time. It automatically handles pod restarts and new pod creations.
+
 ```sh
-make run-dev
+./reallogs -flow=realtime -dir=./log-1 -srv=se-core-charge
 ```
-- Ejecutar el build, salida (reallogs)
+
+- `-dir`: (Optional) Specifies the directory to save logs. Defaults to the `logDirectory` in `config.json`.
+- `-srv`: (Optional) The service name to filter pods. Use `all` to get logs from all pods in the namespace.
+
+### 2. `fromdir` Flow
+
+This flow processes log files from a specified directory and stores them in the SQLite database.
+
 ```sh
-make build
+./reallogs -flow=fromdir -dir=./log-1
 ```
 
-## Flags
-En la ejecución los valores que provienen del `config.json` siempre será la segunda opción.
-- flow: Define el flujo que utiliza.
-  - realtime: se guardan los logs en tiempo real y toman reintentos de lectura si el pod se reinicia.
-  - fromdir: Define que a partir de un directorio con archivos de logs se leerán y se guardará toda la información en json en una base de datos Sqlite.
-  - Ejemplo:
-    ```sh
-    ./reallogs -flow=realtime -dir=./log-1 -srv=se-core-charge
-    ```
-    Nota: Descarga los logs en tiempo real y los guarda en la ruta relativa "./log-1". En `-srv` puede asignar el valor `all` para obtener los logs de todos los pods dentro del namespace.
+- `-dir`: (Required) The directory containing the log files to process.
 
-    ```sh
-    ./reallogs -flow=fromdir -dir=./log-1
-    ```
-    Nota: Carga la información de los logs en formato json que encuentre en "./log-1" en una base de datos Sqlite
+### 3. `btimes` Flow
 
-## Perfil de memoria actual
-Para una prueba con un volumen de datos de 245Mb se tiene un resultante en memoria de 1104Mb. 
+This flow collects logs within a specific time range. The start and end times can be provided via flags or the `config.json` file.
+
+```sh
+./reallogs -flow=btimes -start=14:00 -end=15:00
+```
+
+- `-start`: The start time in `HH:MM` or `YYYY-MM-DDTHH:MM` format.
+- `-end`: (Optional) The end time in `HH:MM` or `YYYY-MM-DDTHH:MM` format. If not provided, the current time is used.
+
+### 4. `fulllog` Flow
+
+This flow downloads all available logs from the pods that match the selector.
+
+```sh
+./reallogs -flow=fulllog -dir=./full-logs
+```
+
+- `-dir`: (Optional) The directory to save the full logs.
+
+## 📊 Command-line Flags
+
+- `-flow`: Defines the execution flow (`realtime`, `fromdir`, `btimes`, `fulllog`).
+- `-dir`: Specifies the target directory for logs.
+- `-ns`: Overrides the namespace from `config.json`.
+- `-srv`: Filters pods by a service name (`all` for all pods).
+- `-start`: The start time for the `btimes` flow.
+- `-end`: The end time for the `btimes` flow.
+- `-batchs`: The batch size for database insertions.
+- `-logperform`: Enables processing of performance logs.
+- `-cpuprofile`: Specifies a file to write a CPU profile to.
+- `-memprofile`: Specifies a file to write a memory profile to.
+
+## 🗃️ SQLite Database
+
+**RealLogs** creates a `log.db` file in the specified log directory. This database contains two tables:
+
+- `general_logs`: Stores all log entries.
+- `performance_logs`: Stores performance-related log data if `-logperform` is enabled.
+
+## 🧠 Memory Profile
+
+In a test with a 245MB data volume, the application's memory usage was approximately 1104MB. This is important to consider for resource planning.
